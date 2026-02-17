@@ -7,40 +7,37 @@
 
 ---
 
-## Why We Built This
+### Why I Built Symphony
 
-The AI agent ecosystem is fragmented. LangChain, CrewAI, Agno, AutoGen — each comes with its own way of chaining agent tasks together, but none of them solve the **orchestration** problem cleanly. If you want to run agents from different frameworks in a single workflow, or swap one framework for another without rewriting your pipeline logic, you're stuck gluing things together with ad-hoc scripts.
+The AI agent ecosystem is fragmented. Chaining tools like LangChain or CrewAI together across frameworks usually requires messy, ad-hoc glue code.
 
-We wanted to answer a simple question: **What if the orchestration layer didn't care which agent framework you use?**
+I built **Symphony** to answer a simple question: **What if the orchestration layer didn't care which agent framework you use?**
 
-Symphony is the result. It's a framework-agnostic orchestrator that treats agent tasks as composable steps — you define *what* each step does, and Symphony handles *when* and *how* they execute. Sequential chains, parallel fan-outs, conditional branching, retry loops — all expressed through a clean builder API that reads like a sentence.
+Symphony is a framework-agnostic orchestrator built entirely from scratch. You define *what* your agents do, and Symphony’s clean builder API handles *when* and *how* they execute—seamlessly managing sequential chains, parallel fan-outs, and conditional routing without tying you to a single tool.
 
-This isn't a wrapper around an existing tool. We designed and implemented every component from the ground up: the execution engine, the type system, the context-passing model, the graph builder, and the API server.
+## What I Learned
 
-## What We Learned
+Building an orchestration engine from scratch forced me to solve real systems-design problems:
 
-Building an orchestration engine from scratch forced us to solve real systems-design problems:
-
-| Challenge | What We Did |
-|-----------|-------------|
-| **Async execution model** | Designed a `Conductor` engine that processes a typed execution graph, dispatching steps through `asyncio.gather` for true concurrency in parallel (ensemble) blocks |
-| **Type safety at runtime** | Integrated Pydantic schemas at every step boundary — inputs and outputs are validated before execution, failing fast with clear errors instead of propagating bad data |
-| **Context threading** | Built a `Performance` context that flows through the entire pipeline, allowing steps to read prior outputs without tight coupling — essential for multi-step AI workflows where later steps depend on earlier results |
-| **Builder pattern design** | Implemented a fluent API (`Pipeline().pipe(a).ensemble([b, c]).fork([...]).seal()`) with an immutable "sealed" state — once a pipeline is sealed, its execution graph is frozen, preventing accidental mutation at runtime |
-| **Execution graph compilation** | Pipelines compile into a `Score` (a typed list of `Block` nodes) that the Conductor walks at runtime — separating graph construction from execution makes the system testable and inspectable |
-| **Conditional control flow** | Fork blocks evaluate gate functions (sync or async) against live data to route execution dynamically — this is how you build "if the sentiment is negative, escalate to a human" logic |
-| **Server layer** | Built a FastAPI-based `Stage` server with auto-generated endpoints for every registered pipeline — inspect, list, and trigger pipelines over HTTP with schema-validated request/response models |
+| Challenge | How I Solved It |
+|-----------|-----------------|
+| **Async execution** | Built a `Conductor` engine using `asyncio.gather` for true parallel concurrency. |
+| **Runtime type safety** | Integrated Pydantic at every step to validate data and fail fast. |
+| **Context threading** | Created a `Performance` context so later steps can cleanly read prior outputs. |
+| **Builder pattern** | Designed a fluent API (`Pipeline().pipe(a).seal()`) that freezes state to prevent bugs. |
+| **Graph compilation** | Compiled pipelines into a testable `Score`, separating construction from execution. |
+| **Dynamic routing** | Built `Fork` blocks to evaluate live data and route execution on the fly. |
+| **Server layer** | Added a FastAPI `Stage` server with auto-generated endpoints to trigger pipelines. |
 
 ## How It Helps
 
-Symphony solves three real problems in production AI systems:
+Symphony solves three major bottlenecks in production AI systems:
 
-**1. Framework lock-in is expensive.** Teams adopt LangChain, hit its limitations, and realize rewriting the orchestration layer means rewriting everything. Symphony decouples the "what" (your agent logic) from the "how" (the execution order), so swapping agent frameworks is a step-level change, not a rewrite.
+**1. Prevents framework lock-in.** Symphony decouples the *what* (agent logic) from the *how* (execution order). Swapping frameworks is now a simple step-level tweak, not a full rewrite.
 
-**2. Complex workflows need more than sequential chains.** Real agent systems need parallel execution (query 3 data sources at once), conditional routing (route by classification result), and retry loops (keep calling the LLM until output passes validation). Symphony provides all four patterns through a single composable API.
+**2. Handles complex workflows natively.** Production requires parallel execution, conditional routing, and retry loops. Symphony provides all of these out of the box through a single, composable API.
 
-**3. Multi-agent debugging is hard.** Symphony's `Performance` context records every step's output, input, and execution order in a structured trace. When step 4 of a 6-step pipeline returns bad data, you can inspect exactly what each prior step produced — no print-statement debugging.
-
+**3. Makes debugging painless.** The `Performance` context records every input, output, and step in a structured trace. If a pipeline fails, you instantly see exactly what prior steps produced—no more `print()` debugging.
 ## Architecture
 
 ```
